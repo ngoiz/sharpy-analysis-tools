@@ -10,38 +10,78 @@ class Stability:
             res = np.loadtxt(file)
         except IndexError:
             print('No velocity data in path {:s}'.format(path))
+            raise FileNotFoundError('Unable to find velocity file data')
         self.eigs = res[:, 1:]
-        self.v = res[:, 0]
+        self.v = res[:, 0]  # raw speeds
+        self.damp = None
+        self.v_f = None  # filtered for any freq limits specified
+        self.frequency = None
+        self.flutter_speed = None
 
-    def flutter(self, vmin=0, use_hz=False):
+    def process(self, **kwargs):
+        self.v_f, self.damp, self.frequency = modes(self.v, self.eigs, **kwargs)
+        self.flutter_speed = find_flutter_speed(self.v_f, self.damp)
 
-        conditions = self.v > vmin
-        n_vel = np.unique(self.v)[1]
-        num_modes = int(self.v.shape[0] // n_vel)
+    def save_to_file(self, output_folder):
+        save_to_file(output_folder, self.v_f, self.damp, self.frequency, self.flutter_speed)
+        np.savetxt(output_folder + '/vel_eigs.txt', np.column_stack((self.v, self.eigs)))
 
-        if np.any(self.eigs[conditions, 0] > 0):
 
-            positive_real = self.eigs[conditions, 0] >= 0
+def modes(v, eigs, **kwargs):
+    hz = kwargs.get('use_hz', False)
 
-            positive_real_index = np.where(self.eigs[conditions, 0] >= 0)[0][0]
+    wn = np.sqrt(eigs[:, 0] ** 2 + eigs[:, 1] ** 2)
+    damp = eigs[:, 0] / wn
 
-            flutter_vel = self.v[conditions][positive_real_index]
+    if hz:
+        wn /= (2 * np.pi)
 
-            #             flutter_vel = np.interp(0, [self.eigs[conditions, 0][positive_real_index-num_modes], self.eigs[conditions, 0][positive_real_index]],
-            #                                    [self.v[conditions][positive_real_index-num_modes], self.v[conditions][positive_real_index]])
+    vmin = kwargs.get('vmin', 0)
+    vmax = kwargs.get('vmax', 1000)
 
-            #             print([self.v[conditions][positive_real_index-num_modes], self.v[conditions][positive_real_index]])
+    wdmax = kwargs.get('wdmax', 10000)
+    wdmin = kwargs.get('wdmin', -1)
 
-            flutter_freq = np.abs(self.eigs[conditions, 1][positive_real_index])
+    conditions = (eigs[:, 0] > -50) * (eigs[:, 1] > wdmin) * (eigs[:, 1] < wdmax) * (v >= vmin) * (v <= vmax)
 
-            if use_hz:
-                flutter_freq /= (2 * np.pi)
+    vc = v[conditions]
+    dampc = damp[conditions]
+    wnc = wn[conditions]
+    return vc, dampc, wnc
 
-            #             flutter_vel = self.v[positive_real][0]
-            #             flutter_re = self.eigs[positive_real, 0][0]
-            #             flutter_im = self.eigs[positive_real, 1][0]
 
-            return flutter_vel, flutter_freq
+def max_mode(v, damp):
+    vels = np.unique(v)
+    max_damp = np.zeros(len(vels))
+    for ith, vel in enumerate(vels):
+        max_damp[ith] = np.max(damp[v == vel])
 
+    return vels, max_damp
+
+
+def find_flutter_speed(v, damp):
+    vu, max_damp = max_mode(v, damp)
+    stable = max_damp >= 0
+    flutter_speeds = []
+    for i in range(1, len(vu)):
+        axis_crossed = int(stable[i-1]) + int(stable[i])
+        if axis_crossed == 1:
+            x = np.array(max_damp[i-1:i+1])
+            order = np.argsort(x)
+            x = x[order]
+            y = np.array(vu[i-1:i+1])[order]
+            v = np.interp(0, x, y, right=0, left=0)
+            flutter_speeds.append(v)
+
+    return flutter_speeds
+
+
+def save_to_file(output_folder, vel, damp, fn, flutter_speed):
+    np.savetxt(output_folder + '/stability_analysis.txt', np.column_stack((vel, damp, fn)))
+
+    with open(output_folder + '/flutter.txt', 'w') as fid:
+        if type(flutter_speed) is list:
+            for speed in flutter_speed:
+                fid.write('Flutter speed = {:.4f} m/s'.format(speed))
         else:
-            return 0
+            fid.write('Flutter speed = {:.4f} m/s'.format(flutter_speed))
