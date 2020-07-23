@@ -78,7 +78,7 @@ class Actual:
                 if 'beam_modal_analysis' in args:
                     case.load_beam_modal_analysis()
                 self.cases[sys].add_case(param_value, case)
-                n_loaded_cases += 1
+            n_loaded_cases += 1
         print('Loaded {} cases'.format(n_loaded_cases))
 
     def eigs(self, sys):
