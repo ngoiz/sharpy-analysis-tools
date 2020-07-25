@@ -94,22 +94,21 @@ class Case:
                 path = self.path_to_sys['WriteVariablesTime']
             except KeyError:
                 return None
-
-        node_files = glob.glob(path)
+        node_files = glob.glob(path + 'pos*')
 
         if len(node_files) == 0:
+            print('No displacement files found at {}'.format(path))
             return None
         res = []
         for file in node_files:
             try:
                 res.append(np.loadtxt(file)[-1, :])
             except IndexError:
-                res.append(np.loadtxt(file))
+                res.append(np.loadtxt(file))  # single entry case in WriteVariablesTime
 
         res = np.vstack(res)
-        #         print(res)
         try:
-            res = res[res[:, 2].argsort()]
+            res = res[res[:, 2].argsort()] # sort by spanwise index
         except IndexError:
             print(res.shape)
             print(self.parameter_value)
