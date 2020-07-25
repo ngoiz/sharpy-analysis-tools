@@ -22,6 +22,7 @@ class Case:
         self.ss = None
 
         self.deflection = None
+        self.crv = None
 
         self.path_to_eigs = kwargs.get('eigs', None)
         self.path_to_sys = dict()
@@ -88,7 +89,7 @@ class Case:
 
         self.ss = libss.ss(data['a'], data['b'], data['c'], data['d'], dt=data.get('dt', None))
 
-    def load_deflection(self, refresh=None, path=None):
+    def load_deflection(self, refresh=None, path=None, reference_line=0):
         if path is None:
             try:
                 path = self.path_to_sys['WriteVariablesTime']
@@ -108,12 +109,34 @@ class Case:
 
         res = np.vstack(res)
         try:
-            res = res[res[:, 2].argsort()] # sort by spanwise index
+            order = res[:, 2].argsort()
+            res = res[order] # sort by spanwise index
         except IndexError:
             print(res.shape)
             print(self.parameter_value)
+            print('Unable to order deflection by span')
+            return None
 
         self.deflection = res
+
+        # load crv if available
+        crv = np.zeros((self.deflection.shape[0], 3))
+        crv_files = glob.glob(path + 'psi*')
+        if len(crv_files) == 0:
+            return None
+        else:
+            crv_list = [] # same order of nodes as position - we'll use that to order these
+            for ith, crv_file in enumerate(crv_files):
+                try:
+                    crv_list.append(np.loadtxt(crv_file)[-1, :])
+                except IndexError:
+                    crv_list.append(np.loadtxt(crv_file))
+
+        for i in range(crv.shape[0]):
+            crv[i, :] = crv_list[order[i]]
+
+        self.crv = crv
+
 
     def load_beam_modal_analysis(self, refresh=None, path=None):
         if path is None:
