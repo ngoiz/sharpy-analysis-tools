@@ -128,9 +128,9 @@ class Case:
             crv_list = [] # same order of nodes as position - we'll use that to order these
             for ith, crv_file in enumerate(crv_files):
                 try:
-                    crv_list.append(np.loadtxt(crv_file)[-1, :])
+                    crv_list.append(np.loadtxt(crv_file)[-1, 1:])
                 except IndexError:
-                    crv_list.append(np.loadtxt(crv_file))
+                    crv_list.append(np.loadtxt(crv_file)[1:])
 
         for i in range(crv.shape[0]):
             crv[i, :] = crv_list[order[i]]
