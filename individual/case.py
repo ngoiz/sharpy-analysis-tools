@@ -69,7 +69,10 @@ class Case:
 
     def load_bode(self, refresh=False, path=None):
         if path is None:
-            path = self.path_to_sys['freqresp']
+            try:
+                path = self.path_to_sys['freqresp']
+            except KeyError:
+                path = glob.glob(self.path + 'frequencyresponse/{}.freqresp.h5'.format(self.system))[0]
 
         try:
             with h5.File(path, 'r') as freq_file_handle:
