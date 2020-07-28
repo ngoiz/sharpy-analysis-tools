@@ -5,6 +5,7 @@ import os
 import h5py as h5
 import sharpy.utils.h5utils as h5utils
 import sharpy.linear.src.libss as libss
+import sharpy.utils.algebra as algebra
 
 
 class Case:
@@ -149,3 +150,13 @@ class Case:
 
         self.beam_eigs = np.zeros((len(frequencies), 2))
         self.beam_eigs[:, 1] = frequencies
+
+    def get_deflection_at_line(self, reference_line=np.array([0, 0, 0.])):
+        if self.crv is None:
+            return self.deflection
+
+        def_at_line = np.zeros((self.deflection.shape[0], 3))
+        for i_node in range(def_at_line.shape[0]):
+            def_at_line[i_node] = self.deflection[i_node, -3:] + algebra.crv2rotation(self.crv[i_node]).dot(reference_line)
+
+        return def_at_line

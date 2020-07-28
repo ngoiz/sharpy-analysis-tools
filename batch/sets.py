@@ -90,7 +90,7 @@ class Actual:
 
         return np.concatenate(param_array), np.concatenate(eigs)
 
-    def wing_tip_deflection(self, frame='a', alpha=0):
+    def wing_tip_deflection(self, frame='a', alpha=0, reference_line=np.array([0, 0, 0], dtype=float)):
         param_array = []
         deflection = []
 
@@ -105,9 +105,9 @@ class Actual:
         for case in self.cases['aeroelastic']:
             param_array.append(case.parameter_value)
             if frame == 'a':
-                deflection.append(case.deflection[-1, -3:])
+                deflection.append(case.get_deflection_at_line(reference_line)[-1, -3:])
             elif frame == 'g':
-                deflection.append(cga.dot(case.deflection[-1, -3:]))
+                deflection.append(cga.dot(case.get_deflection_at_line(reference_line)[-1, -3:]))
 
         param_array = np.array(param_array)
         order = np.argsort(param_array)
