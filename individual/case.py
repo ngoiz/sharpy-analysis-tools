@@ -25,6 +25,8 @@ class Case:
         self.deflection = None
         self.crv = None
 
+        self.aero_forces = None
+
         self.path_to_eigs = kwargs.get('eigs', None)
         self.path_to_sys = dict()
 
@@ -141,7 +143,6 @@ class Case:
 
         self.crv = crv
 
-
     def load_beam_modal_analysis(self, refresh=None, path=None):
         if path is None:
             try:
@@ -163,3 +164,13 @@ class Case:
             def_at_line[i_node] = self.deflection[i_node, -3:] + algebra.crv2rotation(self.crv[i_node]).dot(reference_line)
 
         return def_at_line
+
+    def load_forces(self, path=None):
+        if path is None:
+            try:
+                path = self.path_to_sys['AeroForcesCalculator']
+            except KeyError:
+                return None
+
+        self.aero_forces = np.loadtxt(path, skiprows=1, delimiter=',')
+

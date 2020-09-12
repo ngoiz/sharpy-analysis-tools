@@ -77,6 +77,9 @@ class Actual:
                 case.path_to_sys['beam_modal_analysis'] = case.path + '/beam_modal_analysis'
                 if 'beam_modal_analysis' in args:
                     case.load_beam_modal_analysis()
+
+                if 'forces' in args:
+                    case.load_forces(case.path + '/forces/aeroforces.txt')
                 self.cases[sys].add_case(param_value, case)
             n_loaded_cases += 1
         print('Loaded {} cases'.format(n_loaded_cases))
