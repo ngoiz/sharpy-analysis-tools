@@ -91,6 +91,8 @@ class Actual:
             eigs.append(case.eigs)
             param_array.append(np.ones_like(case.eigs[:, 0]) * case.parameter_value)
 
+        if len(eigs) == 0:
+            raise FileNotFoundError('No eigenvalue data was found.')
         return np.concatenate(param_array), np.concatenate(eigs)
 
     def wing_tip_deflection(self, frame='a', alpha=0, reference_line=np.array([0, 0, 0], dtype=float)):
