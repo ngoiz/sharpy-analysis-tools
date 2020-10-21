@@ -59,10 +59,14 @@ def max_mode(v, damp):
     return vels, max_damp
 
 
-def find_flutter_speed(v, damp):
+def find_flutter_speed(v, damp, instability_damping=0., vel_vmin=0.):
     vu, max_damp = max_mode(v, damp)
-    stable = max_damp >= 0
+    max_damp = max_damp[vu >= vel_vmin]
+    vu = vu[vu >= vel_vmin]
+    stable = max_damp >= instability_damping
     flutter_speeds = []
+    if stable[0] is False:
+        flutter_speeds.append(vu[0])
     for i in range(1, len(vu)):
         axis_crossed = int(stable[i-1]) + int(stable[i])
         if axis_crossed == 1:
