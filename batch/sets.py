@@ -121,6 +121,24 @@ class Actual:
 
         return param_array, deflection
 
+    def forces(self, frame='g'):
+        param_array = []
+        forces = []
+        for case in self.cases['aeroelastic']:
+            param_array.append(case.parameter_value)
+            if frame == 'g':
+                forces.append(case.aero_forces[1:4])
+            elif frame == 'a':
+                forces.append(case.aero_forces[7:10])
+            else:
+                raise NameError('Frame can only be A or G')
+
+        param_array = np.array(param_array)
+        order = np.argsort(param_array)
+        param_array = param_array[order]
+        forces = np.vstack(([forces[ith] for ith in order]))
+
+        return param_array, forces
 
 
 class SetIterator:
