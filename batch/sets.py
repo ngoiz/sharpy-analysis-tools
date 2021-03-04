@@ -140,6 +140,25 @@ class Actual:
 
         return param_array, forces
 
+    def moments(self, frame='g'):
+        param_array = []
+        moments = []
+        for case in self.cases['aeroelastic']:
+            param_array.append(case.parameter_value)
+            if frame == 'g':
+                moments.append(case.aero_forces[-6:-3])
+            elif frame == 'a':
+                moments.append(case.aero_forces[-3:])
+            else:
+                raise NameError('Frame can only be A or G')
+
+        param_array = np.array(param_array)
+        order = np.argsort(param_array)
+        param_array = param_array[order]
+        moments = np.vstack(([moments[ith] for ith in order]))
+
+        return param_array, moments
+
 
 class SetIterator:
 

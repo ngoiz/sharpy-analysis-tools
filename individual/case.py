@@ -93,7 +93,7 @@ class Case:
         with h5.File(path, 'r') as f:
             data = h5utils.load_h5_in_dict(f)
 
-        self.ss = libss.ss(data['a'], data['b'], data['c'], data['d'], dt=data.get('dt', None))
+        self.ss = libss.StateSpace(data['a'], data['b'], data['c'], data['d'], dt=data.get('dt', None))
 
     def load_deflection(self, refresh=None, path=None, reference_line=0):
         if path is None:
