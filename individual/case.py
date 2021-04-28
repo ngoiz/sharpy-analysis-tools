@@ -26,6 +26,7 @@ class Case:
         self.crv = None
 
         self.aero_forces = None
+        self.aero_moments = None
 
         self.path_to_eigs = kwargs.get('eigs', None)
         self.path_to_sys = dict()
@@ -174,3 +175,11 @@ class Case:
 
         self.aero_forces = np.loadtxt(path, skiprows=1, delimiter=',')
 
+    def load_moments(self, path=None):
+        if path is None:
+            try:
+                path = self.path_to_sys['AeroForcesCalculator']
+            except KeyError:
+                return None
+
+        self.aero_moments = np.loadtxt(path, skiprows=1, delimiter=',')

@@ -79,7 +79,8 @@ class Actual:
                     case.load_beam_modal_analysis()
 
                 if 'forces' in args:
-                    case.load_forces(case.path + '/forces/aeroforces.txt')
+                    case.load_forces(case.path + '/forces/forces_aeroforces.txt')
+                    case.load_moments(case.path + '/forces/moments_aeroforces.txt')
                 self.cases[sys].add_case(param_value, case)
             n_loaded_cases += 1
         print('Loaded {} cases'.format(n_loaded_cases))
@@ -146,9 +147,9 @@ class Actual:
         for case in self.cases['aeroelastic']:
             param_array.append(case.parameter_value)
             if frame == 'g':
-                moments.append(case.aero_forces[-6:-3])
+                moments.append(case.aero_moments[1:4])
             elif frame == 'a':
-                moments.append(case.aero_forces[-3:])
+                moments.append(case.aero_moments[7:10])
             else:
                 raise NameError('Frame can only be A or G')
 
