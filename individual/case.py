@@ -6,6 +6,7 @@ import h5py as h5
 import sharpy.utils.h5utils as h5utils
 import sharpy.linear.src.libss as libss
 import sharpy.utils.algebra as algebra
+import pickle
 
 
 class Case:
@@ -13,10 +14,17 @@ class Case:
 
     def __init__(self, parameter_value, system, path_to_data, **kwargs):
         self._name = ''
-        self.parameter_value = parameter_value  #: dict with parameter information (or a simple float)
+
+        if type(parameter_value) is float:
+            self.parameter_value = parameter_value
+        elif len(parameter_value) > 0:
+            self.parameter_value = np.array(parameter_value, dtype=float)
+        # self.parameter_value = parameter_value  #: dict with parameter information (or a simple float)
         self.parameter_name = kwargs.get('parameter_name', 'param')
         self.system = system  #: system name (aeroelastic, aerodynamic or structural)
         self.path = path_to_data
+        case_info = kwargs.get('case_info')
+        self.case_info = {k: float(v) for k, v in case_info.items()}
 
         self.eigs = None
         self.bode = None
@@ -71,6 +79,7 @@ class Case:
                 print('Unable to find eigenvalues at file {:s}'.format(os.path.abspath(path)))
 
     def load_bode(self, refresh=False, path=None):
+        print('Loading frequency data...')
         if path is None:
             try:
                 path = self.path_to_sys['freqresp']
@@ -86,15 +95,27 @@ class Case:
             return
         # Could create a Bode object with ss gain, max gain etc
         self.bode = Bode(wv=freq_dict['frequency'], yfreq=freq_dict['response'])
+        print('...loaded frequency data from {:s}'.format(path))
 
     def load_ss(self, refresh=None, path=None):
         if path is None:
             path = self.path_to_sys['ss']
 
-        with h5.File(path, 'r') as f:
-            data = h5utils.load_h5_in_dict(f)
-
-        self.ss = libss.StateSpace(data['a'], data['b'], data['c'], data['d'], dt=data.get('dt', None))
+        try:
+            with h5.File(path, 'r') as f:
+                data = h5utils.load_h5_in_dict(f)
+            self.ss = libss.StateSpace(data['a'], data['b'], data['c'], data['d'], dt=data.get('dt', None))
+        except EnvironmentError:
+            # try and load from the pickle
+            print('Unable to load from h5 at {:s}, reverting to pickle'.format(path))
+            try:
+                pickle_dir = self.path + '/' + self.path.split('/')[-1] + '.pkl'
+                with open(pickle_dir, 'rb') as f:
+                    data = pickle.load(f)
+                    self.ss = data.linear.linear_system.ss
+            except OSError:
+                print('Could not find pickle at {:s}'.format(pickle_dir))
+                return None
 
     def load_deflection(self, refresh=None, path=None, reference_line=0):
         if path is None:

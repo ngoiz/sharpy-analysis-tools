@@ -18,12 +18,18 @@ class Interpolated(Actual):
         for ith, case_number in enumerate(self.data):
             # item is the dict where the parameter_name is the key
             # single parameter cases only:
-            param_name, param_value = list(self.data[case_number].items())[0]
-            self.parameter_name = param_name
-            param_value = float(param_value)
+            # param_name, param_value = list(self.data[case_number].items())[0]
+            # self.parameter_name = param_name
+            # param_value = float(param_value)
+            self.parameter_name = []
+            param_value = []
+            for k, v in self.data[case_number].items():
+                self.parameter_name.append(k)
+                param_value.append(v)
 
             for sys in self.systems:
-                case = Case(param_value, sys, parameter_name=param_name, path_to_data=self.path)
+                case = Case(self.data[case_number].values(), sys, parameter_name=self.parameter_name, path_to_data=self.path,
+                            case_info=self.data[case_number])
 
                 if 'eigs' in args:
                     case.path_to_sys['eigs'] = self.path + '/stability/param_case{:02g}/{:s}/_eigenvalues.dat'.format(ith,
@@ -40,7 +46,6 @@ class Interpolated(Actual):
 
                     case.load_ss()
 
-                self.cases[sys].add_case(param_value, case)
-
+                self.cases[sys].add_case(param_value, case, self.data[case_number])
             n_loaded_cases += 1
         print('Loaded {} cases'.format(n_loaded_cases))

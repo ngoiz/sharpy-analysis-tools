@@ -18,9 +18,14 @@ class Actual:
         self.aerodynamic = self.cases['aerodynamic']
         self.aeroelastic = self.cases['aeroelastic']
 
+        self.database = dict()
+
     def load_bulk_cases(self, *args, replace_dir=None, append=False, **kwargs):
 
-        source_cases_name = glob.glob(self.path)
+        if kwargs.get('rom_library'):
+            source_cases_name = [entry['path_to_data'] for entry in kwargs['rom_library'].library]
+        else:
+            source_cases_name = glob.glob(self.path)
 
         eigs_legacy = kwargs.get('eigs_legacy', True)
 
@@ -34,9 +39,11 @@ class Actual:
 
             case_info = configobj.ConfigObj(param_file)
 
-            self.param_name, param_value = list(case_info['parameters'].items())[0]
-
-            param_value = float(param_value)
+            self.param_name = []
+            param_value = []
+            for k, v in case_info['parameters'].items():
+                self.param_name.append(k)
+                param_value.append(v)
 
             if replace_dir is not None:
                 path_to_source_case = case_info['sim_info']['path_to_data'].replace('/home/ng213/sharpy_cases/',
@@ -48,7 +55,8 @@ class Actual:
                 if param_value in self.cases[sys].parameter_values and append:
                     continue
 
-                case = Case(param_value, sys, parameter_name=self.param_name, path_to_data=path_to_source_case)
+                case = Case(case_info['parameters'].values(), sys, parameter_name=self.param_name,
+                            path_to_data=path_to_source_case, case_info=case_info['parameters'])
                 case.name = case_info['sim_info']['case']
 
                 if eigs_legacy: # asymtotic stability in dev_pmor has an extra setting to save aeroelastic_eigenvalues.dat
@@ -79,18 +87,27 @@ class Actual:
                     case.load_beam_modal_analysis()
 
                 if 'forces' in args:
-                    case.load_forces(case.path + '/forces/forces_aeroforces.txt')
-                    case.load_moments(case.path + '/forces/moments_aeroforces.txt')
-                self.cases[sys].add_case(param_value, case)
+                    case.load_forces(case.path + '/forces/aeroforces.txt')
+
+                if 'ss' in args:
+                    case.load_ss(path=case.path)
+                self.cases[sys].add_case(param_value, case, case_info['parameters'])
             n_loaded_cases += 1
         print('Loaded {} cases'.format(n_loaded_cases))
+        if n_loaded_cases == 0:
+            print(source_cases_name)
 
     def eigs(self, sys):
         param_array = []
         eigs = []
         for case in self.cases[sys]:
-            eigs.append(case.eigs)
-            param_array.append(np.ones_like(case.eigs[:, 0]) * case.parameter_value)
+            try:
+                param_array.append(np.ones((case.eigs.shape[0], len(case.parameter_value))) * case.parameter_value)
+                eigs.append(case.eigs)
+            except TypeError:
+                param_array.append(np.ones_like(case.eigs[:, 0]) * case.parameter_value)
+            except AttributeError:
+                continue
 
         if len(eigs) == 0:
             raise FileNotFoundError('No eigenvalue data was found.')
@@ -180,16 +197,21 @@ class SetOfCases:
     def __init__(self):
         self.cases = list()
         self.parameter_values = list()
-        self.id_list = list()
+        self.id_list = dict()
+
+        self.database = dict()
 
         self._n_cases = 0
 
-    def add_case(self, parameter_value, case):
+    def add_case(self, parameter_value, case, param_dict=None):
         case.case_id = self.n_cases + 1
 
         self.cases.append(case)
         self.parameter_values.append(parameter_value)
-        self.id_list.append(case.case_id)
+        self.id_list[case.case_id] = case
+        if param_dict is None:
+            import pdb; pdb.set_trace()
+        self.database[case.case_id] = {k: float(v) for k, v in param_dict.items()}
 
     def __call__(self, i):
         return self.cases[i]
@@ -212,3 +234,14 @@ class SetOfCases:
             return self(ind)
         else:
             return ind
+
+    def find_param(self, param_value, return_idx=False):
+        for case_id, entry_values in self.database.items():
+            if entry_values == param_value:
+                if not return_idx:
+                    try:
+                        return self.id_list[case_id]
+                    except KeyError:
+                        msg = f'Unable to find case with {case_id}'
+                else:
+                    return case_id
