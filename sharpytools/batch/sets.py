@@ -1,5 +1,5 @@
-from individual.case import Case
-from linear.stability import Stability
+from sharpytools.individual.case import Case
+from sharpytools.linear.stability import Stability
 import glob
 import configobj
 import numpy as np

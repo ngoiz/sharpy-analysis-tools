@@ -1,5 +1,5 @@
-from batch.sets import SetOfCases, Actual
-from individual.case import Case
+from sharpytools.batch.sets import SetOfCases, Actual
+from sharpytools.individual.case import Case
 import configobj
 
 

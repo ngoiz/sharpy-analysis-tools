@@ -1,4 +1,4 @@
-from linear.statespace import Bode
+from sharpytools.linear.statespace import Bode
 import numpy as np
 import glob
 import os
