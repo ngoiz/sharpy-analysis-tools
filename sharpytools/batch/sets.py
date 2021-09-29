@@ -22,6 +22,8 @@ class Actual:
 
     def load_bulk_cases(self, *args, replace_dir=None, append=False, **kwargs):
 
+        verbose = kwargs.get('verbose', False)
+
         if kwargs.get('rom_library'):
             source_cases_name = [entry['path_to_data'] for entry in kwargs['rom_library'].library]
         else:
@@ -34,7 +36,8 @@ class Actual:
             try:
                 param_file = glob.glob(source + '/*.pmor.sharpy')[0]
             except IndexError:
-                print('Unable to find source case .pmor.sharpy at {:s}'.format(source))
+                if verbose:
+                    print('Unable to find source case .pmor.sharpy at {:s}'.format(source))
                 continue
 
             case_info = configobj.ConfigObj(param_file)
@@ -56,7 +59,8 @@ class Actual:
                     continue
 
                 case = Case(case_info['parameters'].values(), sys, parameter_name=self.param_name,
-                            path_to_data=path_to_source_case, case_info=case_info['parameters'])
+                            path_to_data=path_to_source_case, case_info=case_info['parameters'],
+                            verbose=verbose)
                 case.name = case_info['sim_info']['case']
 
                 if eigs_legacy: # asymtotic stability in dev_pmor has an extra setting to save aeroelastic_eigenvalues.dat

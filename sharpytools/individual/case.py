@@ -41,6 +41,8 @@ class Case:
 
         self._case_id = -1
 
+        self.verbose = kwargs.get('verbose', False)
+
     @property
     def name(self):
         return self._name
@@ -79,7 +81,8 @@ class Case:
                 print('Unable to find eigenvalues at file {:s}'.format(os.path.abspath(path)))
 
     def load_bode(self, refresh=False, path=None):
-        print('Loading frequency data...')
+        if self.verbose:
+            print('Loading frequency data...')
         if path is None:
             try:
                 path = self.path_to_sys['freqresp']
@@ -91,11 +94,14 @@ class Case:
                 # store files in dictionary
                 freq_dict = h5utils.load_h5_in_dict(freq_file_handle)
         except OSError:
-            print('No frequency data - %s' % path)
+            if self.verbose:
+                print('No frequency data - %s' % path)
             return
         # Could create a Bode object with ss gain, max gain etc
         self.bode = Bode(wv=freq_dict['frequency'], yfreq=freq_dict['response'])
-        print('...loaded frequency data from {:s}'.format(path))
+
+        if self.verbose:
+            print('...loaded frequency data from {:s}'.format(path))
 
     def load_ss(self, refresh=None, path=None):
         if path is None:
@@ -107,14 +113,16 @@ class Case:
             self.ss = libss.StateSpace(data['a'], data['b'], data['c'], data['d'], dt=data.get('dt', None))
         except EnvironmentError:
             # try and load from the pickle
-            print('Unable to load from h5 at {:s}, reverting to pickle'.format(path))
+            if self.verbose:
+                print('Unable to load from h5 at {:s}, reverting to pickle'.format(path))
             try:
                 pickle_dir = self.path + '/' + self.path.split('/')[-1] + '.pkl'
                 with open(pickle_dir, 'rb') as f:
                     data = pickle.load(f)
                     self.ss = data.linear.linear_system.ss
             except OSError:
-                print('Could not find pickle at {:s}'.format(pickle_dir))
+                if self.verbose:
+                    print('Could not find pickle at {:s}'.format(pickle_dir))
                 return None
 
     def load_deflection(self, refresh=None, path=None, reference_line=0):
@@ -126,7 +134,8 @@ class Case:
         node_files = glob.glob(path + 'pos*')
 
         if len(node_files) == 0:
-            print('No displacement files found at {}'.format(path))
+            if self.verbose:
+                print('No displacement files found at {}'.format(path))
             return None
         res = []
         for file in node_files:
@@ -140,9 +149,10 @@ class Case:
             order = res[:, 2].argsort()
             res = res[order] # sort by spanwise index
         except IndexError:
-            print(res.shape)
-            print(self.parameter_value)
-            print('Unable to order deflection by span')
+            if self.verbose:
+                print(res.shape)
+                print(self.parameter_value)
+                print('Unable to order deflection by span')
             return None
 
         self.deflection = res
