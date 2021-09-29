@@ -42,7 +42,11 @@ def modes(v, eigs, **kwargs):
     wdmax = kwargs.get('wdmax', 10000)
     wdmin = kwargs.get('wdmin', -1)
 
-    conditions = (eigs[:, 0] > -50) * (eigs[:, 1] > wdmin) * (eigs[:, 1] < wdmax) * (v >= vmin) * (v <= vmax)
+    remin = kwargs.get('remin', -50)
+    remax = kwargs.get('remax', 50)
+
+    conditions = (eigs[:, 0] > remin) * (eigs[:, 0] < remax) \
+                 * (eigs[:, 1] > wdmin) * (eigs[:, 1] < wdmax) * (v >= vmin) * (v <= vmax)
 
     vc = v[conditions]
     dampc = damp[conditions]
@@ -78,6 +82,22 @@ def find_flutter_speed(v, damp, instability_damping=0., vel_vmin=0.):
             flutter_speeds.append(v)
 
     return flutter_speeds
+
+
+def find_flutter_speed2(v, damp, instability_damping=0., vel_vmin=0.):
+    vu, max_damp = max_mode(v, damp)
+
+    max_damp = max_damp - instability_damping
+    crossing_locations = np.argwhere(max_damp[1:] * max_damp[:-1] < 0)
+
+    flutter_speeds = []
+    for location in crossing_locations:
+        loc_index = int(location)
+        pf = np.poly1d(np.polyfit(vu[loc_index:loc_index+2], max_damp[loc_index:loc_index+2], 1))
+        speed = pf.r[0]
+        if speed >= vel_vmin:
+            flutter_speeds.append(speed)
+    return np.array(flutter_speeds)
 
 
 def save_to_file(output_folder, vel, damp, fn, flutter_speed):
